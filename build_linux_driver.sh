@@ -242,6 +242,8 @@ apply_panvk_fixes(){
 	python3 "$repo/patches/panvk_kbase_drm_node.py" "$mesa" || die "panvk_kbase_drm_node.py failed"
 	grep -q BL_DRM_STANDIN "$mesa/src/panfrost/vulkan/panvk_physical_device.c" || die "DRM-node fix did not land"
 	python3 "$repo/patches/panvk_kbase_sync_file_fd_leak.py" "$mesa" || die "panvk_kbase_sync_file_fd_leak.py failed"
+	# Mesa 5a07217 has no gs_bo_pool; keep 226 auto-trim on its five pools.
+	python3 -c 'import pathlib,sys; p=pathlib.Path(sys.argv[1])/"src/panfrost/vulkan/panvk_cmd_pool.c"; s=p.read_text(); s=s.replace("#define PANVK_CMD_POOL_BO_POOLS 6","#define PANVK_CMD_POOL_BO_POOLS 5").replace("out[3] = &pool->gs_bo_pool;","").replace("out[4] = &pool->tls_bo_pool;","out[3] = &pool->tls_bo_pool;").replace("out[5] = &pool->tls_big_bo_pool;","out[4] = &pool->tls_big_bo_pool;"); p.write_text(s)' "$mesa" || die "command-pool auto-trim compat fix failed"
 	python3 "$repo/patches/panvk_csf_provoking_vertex_u64.py" "$mesa" || die "panvk_csf_provoking_vertex_u64.py failed"
 	! grep -qE 'uint32_t[[:space:]]+fn_addr' "$mesa/src/panfrost/vulkan/csf/panvk_vX_cmd_draw.c" 2>/dev/null \
 		|| die "provoking-vertex address fix did not land"
